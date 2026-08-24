@@ -72,4 +72,8 @@ urlpatterns = [
         TokenRefreshViewCustom.as_view(),
         name="token_refresh",
     ),
+    path(
+        "api/",
+        include("borrowings.urls", namespace="borrowings"),
+    ),
 ]
