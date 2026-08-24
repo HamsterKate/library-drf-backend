@@ -14,7 +14,7 @@ from borrowings.serializers import BorrowingSerializer, BorrowingCreateSerialize
         description=(
             "Retrieve borrowings for the authenticated user. "
             "Staff users can retrieve all borrowings and filter them "
-            "by user ID."
+            "by user ID. Borrowings can also be filtered by active status."
         ),
         parameters=[
             OpenApiParameter(
@@ -22,6 +22,16 @@ from borrowings.serializers import BorrowingSerializer, BorrowingCreateSerialize
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
                 description="Filter borrowings by user ID. Available to staff users.",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="is_active",
+                type=OpenApiTypes.BOOL,
+                location=OpenApiParameter.QUERY,
+                description=(
+                    "Filter borrowings by active status. "
+                    "Use true for active borrowings and false for returned borrowings."
+                ),
                 required=False,
             ),
         ],
