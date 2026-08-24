@@ -10,7 +10,7 @@ class BookAPITests(APITestCase):
         self.user_model = get_user_model()
 
         self.admin = self.user_model.objects.create_superuser(
-            username="admin",
+            email="admin@example.com",
             password="admin123",
         )
 
@@ -50,7 +50,7 @@ class BookAPITests(APITestCase):
 
         response = self.client.post(self.list_url, data)
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_admin_can_create_book(self):
         self.client.force_authenticate(user=self.admin)
@@ -80,7 +80,7 @@ class BookAPITests(APITestCase):
 
         response = self.client.put(self.detail_url, data)
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_admin_can_update_book(self):
         self.client.force_authenticate(user=self.admin)
@@ -104,7 +104,7 @@ class BookAPITests(APITestCase):
     def test_delete_book_requires_admin(self):
         response = self.client.delete(self.detail_url)
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertTrue(Book.objects.filter(id=self.book.id).exists())
 
     def test_admin_can_delete_book(self):
