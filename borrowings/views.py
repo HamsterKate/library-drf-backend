@@ -2,10 +2,10 @@ from drf_spectacular.utils import (
     OpenApiParameter, OpenApiTypes, extend_schema, extend_schema_view
 )
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import ModelViewSet
 
 from borrowings.models import Borrowing
-from borrowings.serializers import BorrowingSerializer
+from borrowings.serializers import BorrowingSerializer, BorrowingCreateSerializer
 
 
 @extend_schema_view(
@@ -33,10 +33,27 @@ from borrowings.serializers import BorrowingSerializer
             "only their own borrowings. Staff users can access any borrowing."
         ),
     ),
+    create=extend_schema(
+        summary="Create a borrowing",
+        description=(
+            "Create a borrowing for the authenticated user. "
+            "The book must have available inventory. "
+            "The user and borrow date are set automatically."
+        ),
+        request=BorrowingCreateSerializer,
+        responses={201: BorrowingCreateSerializer},
+    ),
 )
-class BorrowingViewSet(ReadOnlyModelViewSet):
+class BorrowingViewSet(ModelViewSet):
     serializer_class = BorrowingSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ["get", "post"]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return BorrowingCreateSerializer
+
+        return BorrowingSerializer
 
     def get_queryset(self):
         queryset = Borrowing.objects.select_related("book", "user")

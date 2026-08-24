@@ -174,3 +174,112 @@ class BorrowingAPITests(APITestCase):
 
         with self.assertRaises(ValidationError):
             borrowing.full_clean()
+
+    def test_create_borrowing(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "book": self.book1.id,
+                "expected_return_date": "2026-09-01",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        borrowing = Borrowing.objects.get(id=response.data["id"])
+
+        self.assertEqual(borrowing.book, self.book1)
+        self.assertEqual(borrowing.user, self.user)
+        self.assertEqual(
+            borrowing.expected_return_date,
+            date(2026, 9, 1),
+        )
+        self.assertEqual(borrowing.borrow_date, date.today())
+
+    def test_create_borrowing_decreases_book_inventory(self):
+        self.client.force_authenticate(user=self.user)
+
+        initial_inventory = self.book1.inventory
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "book": self.book1.id,
+                "expected_return_date": "2026-09-01",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.book1.refresh_from_db()
+
+        self.assertEqual(
+            self.book1.inventory,
+            initial_inventory - 1,
+        )
+
+    def test_create_borrowing_rejects_book_with_zero_inventory(self):
+        self.book1.inventory = 0
+        self.book1.save()
+
+        self.client.force_authenticate(user=self.user)
+
+        initial_borrowings_count = Borrowing.objects.filter(
+            book=self.book1,
+            user=self.user,
+        ).count()
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "book": self.book1.id,
+                "expected_return_date": "2026-09-01",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assertEqual(
+            Borrowing.objects.filter(
+                book=self.book1,
+                user=self.user,
+            ).count(),
+            initial_borrowings_count,
+        )
+
+    def test_create_borrowing_requires_authentication(self):
+        response = self.client.post(
+            self.list_url,
+            {
+                "book": self.book1.id,
+                "expected_return_date": "2026-09-01",
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+    def test_create_borrowing_does_not_allow_setting_user(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "book": self.book1.id,
+                "expected_return_date": "2026-09-01",
+                "user": self.user2.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        borrowing = Borrowing.objects.get(id=response.data["id"])
+
+        self.assertEqual(borrowing.user, self.user)
