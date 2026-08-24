@@ -22,10 +22,30 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from drf_spectacular.utils import extend_schema
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+
+
+@extend_schema(
+    summary="Obtain JWT tokens",
+    description=(
+        "Obtain access and refresh tokens using user email and password."
+    ),
+)
+class TokenView(TokenObtainPairView):
+    pass
+
+
+@extend_schema(
+    summary="Refresh JWT access token",
+    description="Obtain a new access token using a valid refresh token.",
+)
+class TokenRefreshViewCustom(TokenRefreshView):
+    pass
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -44,12 +64,12 @@ urlpatterns = [
     path("api/", include("users.urls", namespace="users")),
     path(
         "api/token/",
-        TokenObtainPairView.as_view(),
-        name="token_obtain_pair"
+        TokenView.as_view(),
+        name="token_obtain_pair",
     ),
     path(
         "api/token/refresh/",
-        TokenRefreshView.as_view(),
-        name="token_refresh"
+        TokenRefreshViewCustom.as_view(),
+        name="token_refresh",
     ),
 ]
