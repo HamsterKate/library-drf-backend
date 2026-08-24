@@ -35,5 +35,24 @@ class Borrowing(models.Model):
                 "Actual return date cannot be earlier than borrow date."
             )
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    expected_return_date__gte=models.F("borrow_date")
+                ),
+                name="expected_return_date_gte_borrow_date",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(actual_return_date__isnull=True)
+                    | models.Q(
+                        actual_return_date__gte=models.F("borrow_date")
+                    )
+                ),
+                name="actual_return_date_gte_borrow_date",
+            ),
+        ]
+
     def __str__(self):
         return f"{self.user} - {self.book}"
