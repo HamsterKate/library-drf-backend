@@ -56,6 +56,13 @@ class BorrowingAPITests(APITestCase):
             book=self.book2,
             user=self.user2,
         )
+        self.borrowing3 = Borrowing.objects.create(
+            borrow_date=date(2026, 8, 22),
+            expected_return_date=date(2026, 9, 1),
+            actual_return_date=date(2026, 8, 28),
+            book=self.book1,
+            user=self.user,
+        )
 
         self.list_url = "/api/borrowings/"
 
@@ -70,9 +77,14 @@ class BorrowingAPITests(APITestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self.borrowing1.id)
-        self.assertEqual(response.data[0]["user"], self.user.id)
+        self.assertEqual(len(response.data), 2)
+        self.assertSetEqual(
+            {item["id"] for item in response.data},
+            {self.borrowing1.id, self.borrowing3.id},
+        )
+        self.assertTrue(
+            all(item["user"] == self.user.id for item in response.data)
+        )
 
     def test_list_returns_detailed_book_information(self):
         self.client.force_authenticate(user=self.user)
@@ -115,7 +127,7 @@ class BorrowingAPITests(APITestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data), 3)
 
     def test_staff_can_filter_borrowings_by_user(self):
         self.client.force_authenticate(user=self.admin)
@@ -126,8 +138,11 @@ class BorrowingAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["user"], self.user.id)
+        self.assertEqual(len(response.data), 2)
+        self.assertSetEqual(
+            {item["id"] for item in response.data},
+            {self.borrowing1.id, self.borrowing3.id},
+        )
 
     def test_staff_can_retrieve_any_borrowing(self):
         self.client.force_authenticate(user=self.admin)
@@ -148,9 +163,14 @@ class BorrowingAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self.borrowing1.id)
-        self.assertEqual(response.data[0]["user"], self.user.id)
+        self.assertEqual(len(response.data), 2)
+        self.assertSetEqual(
+            {item["id"] for item in response.data},
+            {self.borrowing1.id, self.borrowing3.id},
+        )
+        self.assertTrue(
+            all(item["user"] == self.user.id for item in response.data)
+        )
 
     def test_expected_return_date_cannot_be_before_borrow_date(self):
         borrowing = Borrowing(
@@ -283,3 +303,84 @@ class BorrowingAPITests(APITestCase):
         borrowing = Borrowing.objects.get(id=response.data["id"])
 
         self.assertEqual(borrowing.user, self.user)
+
+    def test_user_can_filter_active_borrowings(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(
+            self.list_url,
+            {"is_active": "true"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.borrowing1.id)
+
+    def test_user_can_filter_returned_borrowings(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(
+            self.list_url,
+            {"is_active": "false"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.borrowing3.id)
+
+    def test_staff_can_filter_active_borrowings(self):
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.get(
+            self.list_url,
+            {"is_active": "true"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.borrowing1.id)
+
+    def test_staff_can_filter_returned_borrowings(self):
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.get(
+            self.list_url,
+            {"is_active": "false"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertSetEqual(
+            {item["id"] for item in response.data},
+            {self.borrowing2.id, self.borrowing3.id},
+        )
+
+    def test_staff_can_filter_borrowings_by_user_and_active_status(self):
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.get(
+            self.list_url,
+            {
+                "user_id": self.user.id,
+                "is_active": "true",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.borrowing1.id)
+
+    def test_staff_can_filter_borrowings_by_user_and_returned_status(self):
+        self.client.force_authenticate(user=self.admin)
+
+        response = self.client.get(
+            self.list_url,
+            {
+                "user_id": self.user.id,
+                "is_active": "false",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.borrowing3.id)
