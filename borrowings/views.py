@@ -33,6 +33,16 @@ from borrowings.serializers import BorrowingSerializer, BorrowingCreateSerialize
             "only their own borrowings. Staff users can access any borrowing."
         ),
     ),
+    create=extend_schema(
+        summary="Create a borrowing",
+        description=(
+            "Create a borrowing for the authenticated user. "
+            "The book must have available inventory. "
+            "The user and borrow date are set automatically."
+        ),
+        request=BorrowingCreateSerializer,
+        responses={201: BorrowingCreateSerializer},
+    ),
 )
 class BorrowingViewSet(ModelViewSet):
     serializer_class = BorrowingSerializer
