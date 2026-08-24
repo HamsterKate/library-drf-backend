@@ -1,6 +1,7 @@
 from datetime import date
 
 from rest_framework import serializers
+from django.db import transaction
 
 from borrowings.models import Borrowing
 from books.serializers import BookSerializer
@@ -38,6 +39,7 @@ class BorrowingCreateSerializer(serializers.ModelSerializer):
 
         return book
 
+    @transaction.atomic
     def create(self, validated_data):
         book = validated_data["book"]
         user = self.context["request"].user
