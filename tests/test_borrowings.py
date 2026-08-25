@@ -384,3 +384,88 @@ class BorrowingAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["id"], self.borrowing3.id)
+
+    def test_return_borrowing(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            f"{self.list_url}{self.borrowing1.id}/return/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.borrowing1.refresh_from_db()
+
+        self.assertEqual(
+            self.borrowing1.actual_return_date,
+            date.today(),
+        )
+
+    def test_return_borrowing_increases_book_inventory(self):
+        self.client.force_authenticate(user=self.user)
+
+        initial_inventory = self.book1.inventory
+
+        response = self.client.post(
+            f"{self.list_url}{self.borrowing1.id}/return/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.book1.refresh_from_db()
+
+        self.assertEqual(
+            self.book1.inventory,
+            initial_inventory + 1,
+        )
+
+    def test_return_borrowing_twice_is_not_allowed(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            f"{self.list_url}{self.borrowing1.id}/return/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.book1.refresh_from_db()
+        inventory_after_first_return = self.book1.inventory
+
+        response = self.client.post(
+            f"{self.list_url}{self.borrowing1.id}/return/"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.book1.refresh_from_db()
+
+        self.assertEqual(
+            self.book1.inventory,
+            inventory_after_first_return,
+        )
+
+    def test_user_cannot_return_other_user_borrowing(self):
+        other_borrowing = Borrowing.objects.create(
+            borrow_date=date(2026, 8, 23),
+            expected_return_date=date(2026, 9, 2),
+            book=self.book2,
+            user=self.user2,
+        )
+
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            f"{self.list_url}{other_borrowing.id}/return/"
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+        other_borrowing.refresh_from_db()
+
+        self.assertIsNone(other_borrowing.actual_return_date)
