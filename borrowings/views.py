@@ -1,3 +1,9 @@
+from datetime import date
+
+from django.db import transaction
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from drf_spectacular.utils import (
     OpenApiParameter, OpenApiTypes, extend_schema, extend_schema_view
 )
@@ -53,6 +59,16 @@ from borrowings.serializers import BorrowingSerializer, BorrowingCreateSerialize
         request=BorrowingCreateSerializer,
         responses={201: BorrowingCreateSerializer},
     ),
+    return_borrowing=extend_schema(
+        summary="Return a borrowing",
+        description=(
+            "Return a borrowing for the authenticated user. "
+            "The actual return date is set to today's date, "
+            "and the book inventory is increased by 1. "
+            "A borrowing cannot be returned twice."
+        ),
+        responses={200: BorrowingSerializer},
+    ),
 )
 class BorrowingViewSet(ModelViewSet):
     serializer_class = BorrowingSerializer
@@ -84,3 +100,31 @@ class BorrowingViewSet(ModelViewSet):
             queryset = queryset.filter(actual_return_date__isnull=False)
 
         return queryset
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="return",
+    )
+    @transaction.atomic
+    def return_borrowing(self, request, pk=None):
+        borrowing = self.get_object()
+
+        if borrowing.actual_return_date is not None:
+            return Response(
+                {"detail": "This borrowing has already been returned."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        borrowing.actual_return_date = date.today()
+        borrowing.save(update_fields=["actual_return_date"])
+
+        borrowing.book.inventory += 1
+        borrowing.book.save(update_fields=["inventory"])
+
+        serializer = self.get_serializer(borrowing)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
