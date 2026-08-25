@@ -76,4 +76,8 @@ urlpatterns = [
         "api/",
         include("borrowings.urls", namespace="borrowings"),
     ),
+    path(
+        "api/",
+        include("payments.urls", namespace="payments"),
+    ),
 ]
