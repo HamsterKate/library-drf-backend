@@ -59,6 +59,16 @@ from borrowings.serializers import BorrowingSerializer, BorrowingCreateSerialize
         request=BorrowingCreateSerializer,
         responses={201: BorrowingCreateSerializer},
     ),
+    return_borrowing=extend_schema(
+        summary="Return a borrowing",
+        description=(
+            "Return a borrowing for the authenticated user. "
+            "The actual return date is set to today's date, "
+            "and the book inventory is increased by 1. "
+            "A borrowing cannot be returned twice."
+        ),
+        responses={200: BorrowingSerializer},
+    ),
 )
 class BorrowingViewSet(ModelViewSet):
     serializer_class = BorrowingSerializer
