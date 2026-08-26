@@ -21,11 +21,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
+env = environ.Env()
+environ.Env.read_env(BASE_DIR / ".env")
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-_()n3nam5*r%yj6wrxk_i3@vs9dg54dboirs5qr^%o2an0m^&4"
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = []
 
@@ -77,9 +80,6 @@ WSGI_APPLICATION = "library_service.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
-
-env = environ.Env()
-environ.Env.read_env(BASE_DIR / ".env")
 
 DATABASES = {
     "default": {
