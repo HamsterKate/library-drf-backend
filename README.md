@@ -9,12 +9,13 @@ A REST API for a library management system built with **Django REST Framework**.
 ## 🛠️ Technologies
 
 <p>
-  <img src="https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/Django-6.x-092E20?style=for-the-badge&logo=django&logoColor=white" alt="Django">
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Django-6.1-092E20?style=for-the-badge&logo=django&logoColor=white" alt="Django">
   <img src="https://img.shields.io/badge/Django_REST_Framework-API-A30000?style=for-the-badge&logo=django&logoColor=white" alt="Django REST Framework">
   <img src="https://img.shields.io/badge/PostgreSQL-17-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
   <img src="https://img.shields.io/badge/JWT-Authentication-black?style=for-the-badge" alt="JWT">
   <img src="https://img.shields.io/badge/OpenAPI-Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" alt="Swagger">
+  <img src="https://img.shields.io/badge/Docker-Containerization-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
 </p>
 
 ---
@@ -78,66 +79,136 @@ library-drf-backend/
 │   ├── asgi.py
 │   └── wsgi.py
 │
+├── .dockerignore
 ├── .env
 ├── .env.sample
 ├── .gitignore
+├── Dockerfile
+├── docker-compose.yml
 ├── manage.py
 ├── requirements.txt
 └── README.md
 ```
 
+> `.env` is used for environment variables and must not be committed to the repository.
+
 ---
 
 ## 🚀 Installation
 
-### 1. Clone the repository
+### 🐳 Option 1: Run with Docker
+
+Make sure **Docker Desktop** is installed and running.
+
+#### 1. Clone the repository
 
 ```bash
 git clone https://github.com/HamsterKate/library-drf-backend.git
 cd library-drf-backend
 ```
 
-### 2. Create a virtual environment
+#### 2. Configure environment variables
 
-#### Windows
+Create a `.env` file in the project root based on `.env.sample`.
+
+> 🔐 Never commit `.env` or any secret values to the repository.
+
+#### 3. Build and start the containers
+
+```bash
+docker compose up --build
+```
+
+The application will be available at:
+
+```text
+http://localhost:8000/
+```
+
+#### 4. Apply migrations
+
+Open a new terminal in the project directory and run:
+
+```bash
+docker compose exec web python manage.py migrate
+```
+
+#### 5. Create a superuser
+
+```bash
+docker compose exec web python manage.py createsuperuser
+```
+
+#### 6. Stop the containers
+
+```bash
+docker compose down
+```
+
+---
+
+### 💻 Option 2: Run locally
+
+#### 1. Clone the repository
+
+```bash
+git clone https://github.com/HamsterKate/library-drf-backend.git
+cd library-drf-backend
+```
+
+#### 2. Create a virtual environment
+
+**Windows**
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 ```
 
-#### Linux / macOS
+**Linux / macOS**
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Install dependencies
+#### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+#### 4. Configure environment variables
 
 Create a `.env` file in the project root based on `.env.sample`.
 
+For local development, configure PostgreSQL with:
+
+```text
+DB_HOST=localhost
+```
+
 > 🔐 Never commit `.env` or any secret values to the repository.
 
-### 5. Apply migrations
+#### 5. Make sure PostgreSQL is installed and running
+
+The project uses **PostgreSQL 17**.
+
+Make sure PostgreSQL is running and that the database credentials in `.env` are configured correctly.
+
+#### 6. Apply migrations
 
 ```bash
 python manage.py migrate
 ```
 
-### 6. Create a superuser
+#### 7. Create a superuser
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### 7. Run the development server
+#### 8. Run the development server
 
 ```bash
 python manage.py runserver
@@ -151,11 +222,67 @@ http://127.0.0.1:8000/
 
 ---
 
+## 🐳 Docker
+
+The project includes Docker support for running the Django application together with PostgreSQL.
+
+The Docker setup includes:
+
+* `Dockerfile` for building the Django application image
+* `docker-compose.yml` for running Django and PostgreSQL containers
+* `.dockerignore` for excluding unnecessary files from the Docker build context
+* PostgreSQL data persistence using a Docker volume
+
+The Docker setup consists of:
+
+```text
+┌──────────────────────┐
+│   Django container   │
+│        web           │
+│      port 8000       │
+└──────────┬───────────┘
+           │
+           │
+┌──────────▼───────────┐
+│ PostgreSQL container │
+│         db           │
+│      port 5432       │
+└──────────────────────┘
+```
+
+Build and start the application:
+
+```bash
+docker compose up --build
+```
+
+Apply migrations:
+
+```bash
+docker compose exec web python manage.py migrate
+```
+
+Run tests inside the Docker container:
+
+```bash
+docker compose exec web python manage.py test
+```
+
+Stop the containers:
+
+```bash
+docker compose down
+```
+
+---
+
 ## 🗄️ Database
 
-🐘 The project uses **PostgreSQL** as the database.
+🐘 The project uses **PostgreSQL 17** as the database.
 
-Before running the project, make sure PostgreSQL is installed and running and that the database credentials in `.env` are configured correctly.
+When running with Docker, PostgreSQL runs in a separate Docker container and its data is stored in a Docker volume.
+
+When running locally, PostgreSQL must be installed and running on the host machine.
 
 ---
 
@@ -163,15 +290,15 @@ Before running the project, make sure PostgreSQL is installed and running and th
 
 Interactive API documentation is available through **Swagger UI**:
 
-👉 http://127.0.0.1:8000/api/docs/
+👉 http://localhost:8000/api/docs/
 
 OpenAPI schema:
 
-👉 http://127.0.0.1:8000/api/schema/
+👉 http://localhost:8000/api/schema/
 
 Alternative documentation with **ReDoc**:
 
-👉 http://127.0.0.1:8000/api/docs/redoc/
+👉 http://localhost:8000/api/docs/redoc/
 
 ---
 
@@ -199,10 +326,16 @@ Use the access token when making authenticated requests.
 
 The project uses **`TestCase`-based tests** together with Django REST Framework test utilities.
 
-Run all tests with:
+Run all tests locally with:
 
 ```bash
 python manage.py test
+```
+
+Run all tests inside Docker:
+
+```bash
+docker compose exec web python manage.py test
 ```
 
 You can also run tests for a specific application:
@@ -214,6 +347,7 @@ python manage.py test tests.test_borrowings
 python manage.py test tests.test_payments
 ```
 
+The project currently contains **53 tests**, all passing successfully.
 
 ---
 
